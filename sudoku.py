@@ -1,6 +1,171 @@
 sudoku_board = {}
 SUDOKU_BOARD_SIZE = 9;
 
+
+class Board(object):
+    def __init__(self, filename):
+        self._board = {}
+
+        for x in range(9):
+            for y in range(9):
+                self._board[x, y] = {}
+                self._board[x, y]['current'] = 0
+                self._board[x, y]['possible'] = []
+
+        self._load(filename)
+
+    def getCurrent(self, point):
+        return self._board[point]['current']
+
+    def setCurrent(self, point, value):
+        self._board[point]['current'] = value
+
+    def setPossibilities(self, point, possibilities):
+        self._board[point]['possible'] = possibilities
+
+    def getPossibilities(self, point):
+        return self._board[point]['possible']
+
+    def getNumberOfPossibilities(self, point):
+        return len(self._board[point]['possible'])
+
+    def _load(self, filename):
+        position_iterator = Position_Iterator()
+        board_file = open(filename, 'r')
+        for data_point in board_file.read():
+            if data_point is not '\n':
+                position = next(position_iterator)
+                if data_point is not 'X':
+                    self._board[position]['current'] = int(data_point)
+
+    def show(self):
+        for y in range(9):
+            if y % 3 == 0:
+                print("-" * 25)
+            for x in range(9):
+                if x % 3 == 0:
+                    self._boardPrint('|')
+                if self._board[x, y]['current'] == 0:
+                    self._boardPrint(" ")
+                else:
+                    self._boardPrint(self._board[x, y]['current'])
+            print("|")
+        print("-" * 25)
+
+    @staticmethod
+    def _boardPrint(le_string):
+        print(le_string, end=' ')
+
+    @staticmethod
+    def getSquare(point):
+        square_points = []
+        x_i, y_i = point
+        x = (x_i // 3) * 3
+        y = (y_i // 3) * 3
+        for i in range(3):
+            for j in range(3):
+                square_points.append((x + i, y + j))
+
+        return square_points
+
+    @staticmethod
+    def getRow(point):
+        row_points = []
+        x_i, y_i = point
+        for i in range(9):
+            row_points.append((i, y_i))
+        return row_points
+
+    @staticmethod
+    def getColumn(point):
+        column_points = []
+        x_i, y_i = point
+        for i in range(9):
+            column_points.append((x_i, i))
+        return column_points
+
+
+class Solver(object):
+    def __init__(self, board):
+        self._board = board
+
+    def findPossibilities(self):
+        for x in range(9):
+            for y in range(9):
+                point = (x, y)
+                if self._board.getCurrent(point) == 0:
+
+                    possibilities = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+                    for position in self._board.getSquare(point):
+                        if self._board.getCurrent(position) in possibilities:
+                            possibilities.remove(self._board.getCurrent(position))
+
+                    for position in self._board.getRow(point):
+                        if self._board.getCurrent(position) in possibilities:
+                            possibilities.remove(self._board.getCurrent(position))
+
+                    for position in self._board.getColumn(point):
+                        if self._board.getCurrent(position) in possibilities:
+                            possibilities.remove(self._board.getCurrent(position))
+
+                    self._board.setPossibilities(point, possibilities)
+
+    def isSquareUnique(self, point, possibility):
+        for position in self._board.getSquare(point):
+            if possibility in self._board.getPossibilities(position) and position != point:
+                return False
+
+        return True
+
+    def isRowUnique(self, point, possibility):
+        for position in self._board.getRow(point):
+            if possibility in self._board.getPossibilities(position) and position != point:
+                return False
+
+        return True
+
+    def isColumnUnique(self, point, possibility):
+        for position in self._board.getColumn(point):
+            if possibility in self._board.getPossibilities(position) and position != point:
+                return False
+
+        return True
+
+    def isLineUnique(self, point, possibility):
+        if self.isRowUnique(point, possibility) or self.isColumnUnique(point, possibility):
+            return True
+        return False
+
+    def isUnique(self, point, possibility):
+        if self.isLineUnique(point, possibility) or self.isSquareUnique(point, possibility):
+            return True
+        return False
+
+    def applyPossibilities(self):
+        for x in range(9):
+            for y in range(9):
+                point = (x, y)
+                if self._board.getNumberOfPossibilities(point) == 1:
+                    self._board.setCurrent(point,
+                        self._board.getPossibilities(point)[0])
+                for possibility in self._board.getPossibilities(point):
+                    if self.isUnique(point, possibility):
+                        self._board.setCurrent(point, possibility)
+
+        for x in range(9):
+            for y in range(9):
+                point = (x, y)
+                if self._board.getCurrent(point) > 0 and self._board.getNumberOfPossibilities(point) != 0:
+                    self._board.setPossibilities(point, [])
+
+    def isSolved(self):
+        for x in range(9):
+            for y in range(9):
+                if self._board.getCurrent((x, y)) == 0:
+                    return False
+        return True
+
 def Position_Iterator():
     x = 0
     y = 0
@@ -15,158 +180,27 @@ def Position_Iterator():
             y += 1
 
 
-def Print_Board(sudoku_board):
-    for y in range(SUDOKU_BOARD_SIZE):
-        if y % 3 == 0:
-            print("-" * 25)
-        for x in range(SUDOKU_BOARD_SIZE):
-            if x % 3 == 0:
-                prnt('|')
-            if sudoku_board[x, y]['current'] == 0:
-                prnt(" ")
-            else:
-                prnt(sudoku_board[x, y]['current'])
-        print("|")
-    print("-" * 25)
 
 
-def Load_Board(filename):
-    position_iterator = Position_Iterator()
-    board_file = open(filename, 'r')
-    for data_point in board_file.read():
-        if data_point is not '\n':
-            position = next(position_iterator)
-            if data_point is not 'X':
-                sudoku_board[position]['current'] = int(data_point)
+le_board = Board("board3.txt")
+le_board.show()
 
-def Get_Square(point):
-    square_points = []
-    x_i, y_i = point
-    x = (x_i // 3) * 3
-    y = (y_i // 3) * 3
-    for i in range(3):
-        for j in range(3):
-            square_points.append((x + i, y + j))
-
-    return square_points
-
-def Get_Row(point):
-    row_points = []
-    x_i, y_i = point
-    for i in range(9):
-        row_points.append((i, y_i))
-    return row_points
-
-def Get_Column(point):
-    column_points = []
-    x_i, y_i = point
-    for i in range(9):
-        column_points.append((x_i, i))
-    return column_points
-
-def Find_Possibilities(sudoku_board):
-    for x in range(SUDOKU_BOARD_SIZE):
-        for y in range(SUDOKU_BOARD_SIZE):
-            if sudoku_board[x, y]['current'] == 0:
-
-                possibilities = [1,2,3,4,5,6,7,8,9]
-
-                for position in Get_Square((x, y)):
-                    if sudoku_board[position]['current'] in possibilities:
-                        possibilities.remove(sudoku_board[position]['current'])
-
-                for position in Get_Row((x, y)):
-                    if sudoku_board[position]['current'] in possibilities:
-                        possibilities.remove(sudoku_board[position]['current'])
-
-                for position in Get_Column((x, y)):
-                    if sudoku_board[position]['current'] in possibilities:
-                        possibilities.remove(sudoku_board[position]['current'])
-
-
-
-                sudoku_board[x, y]['possible'] = possibilities
-
-def Is_Square_Unique(sudoku_board, point, possibility):
-    for position in Get_Square(point):
-        if possibility in sudoku_board[position]['possible'] and position != point:
-            return False
-
-    return True
-
-def Is_Row_Unique(sudoku_board, point, possibility):
-    for position in Get_Row(point):
-        if possibility in sudoku_board[position]['possible'] and position != point:
-            return False
-
-    return True
-
-def Is_Column_Unique(sudoku_board, point, possibility):
-    for position in Get_Column(point):
-        if possibility in sudoku_board[position]['possible'] and position != point:
-            return False
-
-    return True
-
-def Is_Line_Unique(sudoku_board, point, possibility):
-    if Is_Row_Unique(sudoku_board, point, possibility) or Is_Column_Unique(sudoku_board, point, possibility):
-        return True
-    return False
-
-
-def Is_Unique(sudoku_board, point, possibility):
-    if Is_Line_Unique(sudoku_board, point, possibility) or Is_Square_Unique(sudoku_board, point, possibility):
-        return True
-    return False
-
-def Use_Possibilities(sudoku_board):
-    for x in range(9):
-        for y in range(9):
-            if len(sudoku_board[x, y]['possible']) == 1:
-                sudoku_board[x, y]['current'] = sudoku_board[x, y]['possible'][0]
-            for possibility in sudoku_board[x, y]['possible']:
-                if Is_Unique(sudoku_board, (x, y), possibility):
-                    sudoku_board[x, y]['current'] = possibility
-
-def Is_Solved(sudoku_board):
-    for x in range(9):
-        for y in range(9):
-            if sudoku_board[x, y]['current'] == 0:
-                return False
-
-    return True
-
-def prnt(le_string):
-    print(le_string, end=' ')
-
-for x in range(SUDOKU_BOARD_SIZE):
-    for y in range(SUDOKU_BOARD_SIZE):
-        sudoku_board[x, y] = {}
-        sudoku_board[x, y]['current'] = 0
-        sudoku_board[x, y]['possible'] = []
-
-Load_Board("board4.txt")
-Print_Board(sudoku_board)
+le_solver = Solver(le_board)
 
 iterations = 0
 
-while(not Is_Solved(sudoku_board)):
+while(not le_solver.isSolved()):
     iterations += 1
-    Find_Possibilities(sudoku_board)
-    Use_Possibilities(sudoku_board)
+    le_solver.findPossibilities()
+    le_solver.applyPossibilities()
 
-    for x in range(9):
-        for y in range(9):
-            if sudoku_board[x, y]['current'] > 0 and len(sudoku_board[x, y]['possible']) != 0:
-                sudoku_board[x, y]['possible'] = []
-
-    Print_Board(sudoku_board)
+    le_board.show()
     inp = input("")
     if inp == "p":
-        for x in range(SUDOKU_BOARD_SIZE):
-            for y in range(SUDOKU_BOARD_SIZE):
-                if sudoku_board[x, y]['possible'] != []:
-                    print(str(x)+ ", " + str(y) + " -> " + str(sudoku_board[x, y]['possible']))
+        for x in range(9):
+            for y in range(9):
+                if le_board.getPossibilities((x, y)) != []:
+                    print(str(x)+ ", " + str(y) + " -> " + str(le_board.getPossibilities((x, y))))
 
-Print_Board(sudoku_board)
+le_board.show()
 print(iterations)
