@@ -1,16 +1,11 @@
-sudoku_board = {}
-SUDOKU_BOARD_SIZE = 9;
-
-
 class Board(object):
     def __init__(self, filename):
         self._board = {}
 
-        for x in range(9):
-            for y in range(9):
-                self._board[x, y] = {}
-                self._board[x, y]['current'] = 0
-                self._board[x, y]['possible'] = []
+        for point in sodoku_points():
+            self._board[point] = {}
+            self._board[point]['current'] = 0
+            self._board[point]['possible'] = []
 
         self._load(filename)
 
@@ -90,26 +85,24 @@ class Solver(object):
         self._board = board
 
     def findPossibilities(self):
-        for x in range(9):
-            for y in range(9):
-                point = (x, y)
-                if self._board.getCurrent(point) == 0:
+        for point in sodoku_points():
+            if self._board.getCurrent(point) == 0:
 
-                    possibilities = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+                possibilities = [1, 2, 3, 4, 5, 6, 7, 8, 9]
 
-                    for position in self._board.getSquare(point):
-                        if self._board.getCurrent(position) in possibilities:
-                            possibilities.remove(self._board.getCurrent(position))
+                for position in self._board.getSquare(point):
+                    if self._board.getCurrent(position) in possibilities:
+                        possibilities.remove(self._board.getCurrent(position))
 
-                    for position in self._board.getRow(point):
-                        if self._board.getCurrent(position) in possibilities:
-                            possibilities.remove(self._board.getCurrent(position))
+                for position in self._board.getRow(point):
+                    if self._board.getCurrent(position) in possibilities:
+                        possibilities.remove(self._board.getCurrent(position))
 
-                    for position in self._board.getColumn(point):
-                        if self._board.getCurrent(position) in possibilities:
-                            possibilities.remove(self._board.getCurrent(position))
+                for position in self._board.getColumn(point):
+                    if self._board.getCurrent(position) in possibilities:
+                        possibilities.remove(self._board.getCurrent(position))
 
-                    self._board.setPossibilities(point, possibilities)
+                self._board.setPossibilities(point, possibilities)
 
     def isSquareUnique(self, point, possibility):
         for position in self._board.getSquare(point):
@@ -143,27 +136,22 @@ class Solver(object):
         return False
 
     def applyPossibilities(self):
-        for x in range(9):
-            for y in range(9):
-                point = (x, y)
-                if self._board.getNumberOfPossibilities(point) == 1:
-                    self._board.setCurrent(point,
-                        self._board.getPossibilities(point)[0])
-                for possibility in self._board.getPossibilities(point):
-                    if self.isUnique(point, possibility):
-                        self._board.setCurrent(point, possibility)
+        for point in sodoku_points():
+            if self._board.getNumberOfPossibilities(point) == 1:
+                self._board.setCurrent(point,
+                    self._board.getPossibilities(point)[0])
+            for possibility in self._board.getPossibilities(point):
+                if self.isUnique(point, possibility):
+                    self._board.setCurrent(point, possibility)
 
-        for x in range(9):
-            for y in range(9):
-                point = (x, y)
-                if self._board.getCurrent(point) > 0 and self._board.getNumberOfPossibilities(point) != 0:
-                    self._board.setPossibilities(point, [])
+        for point in sodoku_points():
+            if self._board.getCurrent(point) > 0 and self._board.getNumberOfPossibilities(point) != 0:
+                self._board.setPossibilities(point, [])
 
     def isSolved(self):
-        for x in range(9):
-            for y in range(9):
-                if self._board.getCurrent((x, y)) == 0:
-                    return False
+        for point in sodoku_points():
+            if self._board.getCurrent(point) == 0:
+                return False
         return True
 
 def Position_Iterator():
@@ -179,8 +167,10 @@ def Position_Iterator():
             x = 0
             y += 1
 
-
-
+def sodoku_points():
+    for x in range(9):
+        for y in range(9):
+            yield (x, y)
 
 le_board = Board("board3.txt")
 le_board.show()
@@ -197,10 +187,9 @@ while(not le_solver.isSolved()):
     le_board.show()
     inp = input("")
     if inp == "p":
-        for x in range(9):
-            for y in range(9):
-                if le_board.getPossibilities((x, y)) != []:
-                    print(str(x)+ ", " + str(y) + " -> " + str(le_board.getPossibilities((x, y))))
+        for point in sodoku_points():
+                if le_board.getPossibilities(point) != []:
+                    print(str(point) + " -> " + str(le_board.getPossibilities(point)))
 
 le_board.show()
 print(iterations)
