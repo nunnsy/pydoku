@@ -15,7 +15,6 @@ class Point(object):
 
     def setValue(self, value):
         self._value = value
-        self._possibilities = []
 
     def getCoords(self):
         return self._point
@@ -132,6 +131,7 @@ class Solver(object):
 
                 self._board.getPoint(point).setPossibileValues(self._possibilities)
 
+
     def _checkPossibility(self, position):
         check_value = self._board.getPoint(position).getValue()
         if check_value in self._possibilities:
@@ -142,7 +142,6 @@ class Solver(object):
             if possibility in self._board.getPoint(check_position).getPossibileValues() and check_position != coords:
                 return False
 
-        print(str(coords) + " is SQUARE unique with value " + str(possibility))
         return True
 
     def _isRowUnique(self, coords, possibility):
@@ -150,7 +149,6 @@ class Solver(object):
             if possibility in self._board.getPoint(check_position).getPossibileValues() and check_position != coords:
                 return False
 
-        print(str(coords) + " is ROW unique with value " + str(possibility))
         return True
 
     def _isColumnUnique(self, coords, possibility):
@@ -158,7 +156,6 @@ class Solver(object):
             if possibility in self._board.getPoint(check_position).getPossibileValues() and check_position != coords:
                 return False
 
-        print(str(coords) + " is COLUMN unique with value " + str(possibility))
         return True
 
     def _isLineUnique(self, coords, possibility):
@@ -176,11 +173,13 @@ class Solver(object):
             if point.getPossibilityCount() == 1:
                 point.setOnlyPossibility()
 
-            self.findPossibilities()
-
             for point_possibility in point.getPossibileValues():
                 if self._isUnique(coords, point_possibility):
                     point.setValue(point_possibility)
+
+        for _, point in self._board:
+            if point != 0 and point.getPossibilityCount() != 0:
+                point.setPossibileValues([])
 
     def isSolved(self):
         for point in sodoku_points():
@@ -199,7 +198,7 @@ def sodoku_points():
         for x in range(9):
             yield (x, y)
 
-le_board = Board("board2.txt")
+le_board = Board("board4.txt")
 le_board.show()
 
 le_solver = Solver(le_board)
@@ -211,12 +210,14 @@ while(not le_solver.isSolved()):
     le_solver.findPossibilities()
     le_solver.applyPossibilities()
 
-    le_board.show()
+    inp = ""
     inp = input("")
     if inp == "p":
         for point in sodoku_points():
                 if le_board.getPoint(point).getPossibilityCount() != 0:
                     print(str(point) + " -> " + str(le_board.getPoint(point).getPossibileValues()))
+    if inp == "s" or inp == "p":
+        le_board.show()
 
 le_board.show()
 print(iterations)
