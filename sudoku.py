@@ -1,37 +1,62 @@
+class Point(object):
+    def __init__(self, point):
+        self._point = point
+        self._value = 0
+        self._possibilities = []
+
+    def setPossibileValues(self, possibilities):
+        self._possibilities = possibilities
+
+    def getPossibileValues(self):
+        return self._possibilities
+
+    def getValue(self):
+        return self._value
+
+    def setValue(self, value):
+        self._value = value
+        self._possibilities = []
+
+    def getCoords(self):
+        return self._point
+
+    def getPossibilityCount(self):
+        return len(self._possibilities)
+
+    def setOnlyPossibility(self):
+        self.setValue(self._possibilities[0])
+
+    def existsPossibility(self, possibility):
+        return possibility in self._possibilities
+
+    def __eq__(self, value):
+        if self._value == value:
+            return True
+        return False
+
+    def __repr__(self):
+        return "Point: " + str(self._point) + " -> " + str(self._possibilities)
+
 class Board(object):
     def __init__(self, filename):
         self._board = {}
 
         for point in sodoku_points():
-            self._board[point] = {}
-            self._board[point]['current'] = 0
-            self._board[point]['possible'] = []
+            self._board[point] = Point(point)
 
         self._load(filename)
 
-    def getCurrent(self, point):
-        return self._board[point]['current']
-
-    def setCurrent(self, point, value):
-        self._board[point]['current'] = value
-
-    def setPossibilities(self, point, possibilities):
-        self._board[point]['possible'] = possibilities
-
-    def getPossibilities(self, point):
-        return self._board[point]['possible']
-
-    def getNumberOfPossibilities(self, point):
-        return len(self._board[point]['possible'])
+    def getPoint(self, point):
+        return self._board[point]
 
     def _load(self, filename):
-        position_iterator = Position_Iterator()
+        points = sodoku_points()
         board_file = open(filename, 'r')
         for data_point in board_file.read():
             if data_point is not '\n':
-                position = next(position_iterator)
+                position = next(points)
                 if data_point is not 'X':
-                    self._board[position]['current'] = int(data_point)
+                    self.getPoint(position).setValue(int(data_point))
 
     def show(self):
         for y in range(9):
@@ -40,10 +65,10 @@ class Board(object):
             for x in range(9):
                 if x % 3 == 0:
                     self._boardPrint('|')
-                if self._board[x, y]['current'] == 0:
+                if self.getPoint((x, y)) == 0:
                     self._boardPrint(" ")
                 else:
-                    self._boardPrint(self._board[x, y]['current'])
+                    self._boardPrint(self.getPoint((x, y)).getValue())
             print("|")
         print("-" * 25)
 
@@ -79,100 +104,102 @@ class Board(object):
             column_points.append((x_i, i))
         return column_points
 
+    def __iter__(self):
+        return iter(self._board.items())
+
+    def __getitem__(self, point):
+        return self._board[point]
 
 class Solver(object):
     def __init__(self, board):
         self._board = board
+        self._possibilities = []
 
     def findPossibilities(self):
         for point in sodoku_points():
-            if self._board.getCurrent(point) == 0:
+            if self._board.getPoint(point) == 0:
 
-                possibilities = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+                self._possibilities = [1, 2, 3, 4, 5, 6, 7, 8, 9]
 
                 for position in self._board.getSquare(point):
-                    if self._board.getCurrent(position) in possibilities:
-                        possibilities.remove(self._board.getCurrent(position))
+                    self._checkPossibility(position)
 
                 for position in self._board.getRow(point):
-                    if self._board.getCurrent(position) in possibilities:
-                        possibilities.remove(self._board.getCurrent(position))
+                    self._checkPossibility(position)
 
                 for position in self._board.getColumn(point):
-                    if self._board.getCurrent(position) in possibilities:
-                        possibilities.remove(self._board.getCurrent(position))
+                    self._checkPossibility(position)
 
-                self._board.setPossibilities(point, possibilities)
+                self._board.getPoint(point).setPossibileValues(self._possibilities)
 
-    def isSquareUnique(self, point, possibility):
-        for position in self._board.getSquare(point):
-            if possibility in self._board.getPossibilities(position) and position != point:
+    def _checkPossibility(self, position):
+        check_value = self._board.getPoint(position).getValue()
+        if check_value in self._possibilities:
+            self._possibilities.remove(check_value)
+
+    def _isSquareUnique(self, coords, possibility):
+        for check_position in self._board.getSquare(coords):
+            if possibility in self._board.getPoint(check_position).getPossibileValues() and check_position != coords:
                 return False
 
+        print(str(coords) + " is SQUARE unique with value " + str(possibility))
         return True
 
-    def isRowUnique(self, point, possibility):
-        for position in self._board.getRow(point):
-            if possibility in self._board.getPossibilities(position) and position != point:
+    def _isRowUnique(self, coords, possibility):
+        for check_position in self._board.getRow(coords):
+            if possibility in self._board.getPoint(check_position).getPossibileValues() and check_position != coords:
                 return False
 
+        print(str(coords) + " is ROW unique with value " + str(possibility))
         return True
 
-    def isColumnUnique(self, point, possibility):
-        for position in self._board.getColumn(point):
-            if possibility in self._board.getPossibilities(position) and position != point:
+    def _isColumnUnique(self, coords, possibility):
+        for check_position in self._board.getColumn(coords):
+            if possibility in self._board.getPoint(check_position).getPossibileValues() and check_position != coords:
                 return False
 
+        print(str(coords) + " is COLUMN unique with value " + str(possibility))
         return True
 
-    def isLineUnique(self, point, possibility):
-        if self.isRowUnique(point, possibility) or self.isColumnUnique(point, possibility):
+    def _isLineUnique(self, coords, possibility):
+        if self._isRowUnique(coords, possibility) or self._isColumnUnique(coords, possibility):
             return True
         return False
 
-    def isUnique(self, point, possibility):
-        if self.isLineUnique(point, possibility) or self.isSquareUnique(point, possibility):
+    def _isUnique(self, coords, possibility):
+        if self._isLineUnique(coords, possibility) or self._isSquareUnique(coords, possibility):
             return True
         return False
 
     def applyPossibilities(self):
-        for point in sodoku_points():
-            if self._board.getNumberOfPossibilities(point) == 1:
-                self._board.setCurrent(point,
-                    self._board.getPossibilities(point)[0])
-            for possibility in self._board.getPossibilities(point):
-                if self.isUnique(point, possibility):
-                    self._board.setCurrent(point, possibility)
+        for coords, point in self._board:
+            if point.getPossibilityCount() == 1:
+                point.setOnlyPossibility()
 
-        for point in sodoku_points():
-            if self._board.getCurrent(point) > 0 and self._board.getNumberOfPossibilities(point) != 0:
-                self._board.setPossibilities(point, [])
+            self.findPossibilities()
+
+            for point_possibility in point.getPossibileValues():
+                if self._isUnique(coords, point_possibility):
+                    point.setValue(point_possibility)
 
     def isSolved(self):
         for point in sodoku_points():
-            if self._board.getCurrent(point) == 0:
+            if self._board.getPoint(point) == 0:
                 return False
         return True
 
-def Position_Iterator():
-    x = 0
-    y = 0
-
-    while y < 9:
-        yield (x, y)
-
-        x += 1
-
-        if x == 9:
-            x = 0
-            y += 1
-
 def sodoku_points():
-    for x in range(9):
-        for y in range(9):
+    """ A method used to generate the points required for loading and checking
+    the sodoku grid.
+
+    sodoku_points -> Generator((int, int))
+
+    """
+    for y in range(9):
+        for x in range(9):
             yield (x, y)
 
-le_board = Board("board3.txt")
+le_board = Board("board2.txt")
 le_board.show()
 
 le_solver = Solver(le_board)
@@ -188,8 +215,8 @@ while(not le_solver.isSolved()):
     inp = input("")
     if inp == "p":
         for point in sodoku_points():
-                if le_board.getPossibilities(point) != []:
-                    print(str(point) + " -> " + str(le_board.getPossibilities(point)))
+                if le_board.getPoint(point).getPossibilityCount() != 0:
+                    print(str(point) + " -> " + str(le_board.getPoint(point).getPossibileValues()))
 
 le_board.show()
 print(iterations)
